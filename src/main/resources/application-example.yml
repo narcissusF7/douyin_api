@@ -1,0 +1,41 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: douyin-open-api
+  jackson:
+    default-property-inclusion: non_null
+
+douyin:
+  # 应用凭证：优先读取环境变量 DOUYIN_APP_KEY / DOUYIN_APP_SECRET，避免硬编码
+  app-key: ${DOUYIN_APP_KEY:}
+  app-secret: ${DOUYIN_APP_SECRET:}
+  # 抖店开放平台 API 网关（仅正式环境）
+  gateway: https://openapi-fxg.jinritemai.com/
+  # 第三方应用授权页（商家点击授权后携带 code 跳回 redirect-uri）
+  authorize-url: https://openweb.jinritemai.com/doudian/shop/authorize
+  redirect-uri: ${DOUYIN_REDIRECT_URI:}
+  # 授权 scope，多个用半角逗号分隔；按需向平台申请
+  scope: ${DOUYIN_SCOPE:}
+  # HTTP 超时（毫秒）
+  connect-timeout: 5000
+  read-timeout: 10000
+
+  # 对外接口鉴权（API-Key）
+  api:
+    security:
+      enabled: true
+      # 生产务必通过环境变量 DOUYIN_API_KEY 注入，切勿硬编码真实值
+      api-key: ${DOUYIN_API_KEY:}
+      header-name: X-API-Key
+
+  # 消息推送订阅（开放平台「消息订阅 / 消息推送」）
+  message:
+    enabled: true
+    # 平台后台「消息推送」处配置的 token，需与 DOUYIN_MESSAGE_TOKEN 一致；生产通过环境变量注入
+    token: ${DOUYIN_MESSAGE_TOKEN:}
+
+logging:
+  level:
+    com.dsh.douyin: INFO

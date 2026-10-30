@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>抖店开放平台 · 接口测试台</title>
+<style>
+  :root{
+    --bg:#f5f7fb; --panel:#ffffff; --ink:#1f2433; --sub:#6b7280;
+    --line:#e6e9f0; --brand:#2b5cff; --brand-d:#1e44c9;
+    --ok:#16a34a; --bad:#dc2626; --warn:#d97706; --code:#0f172a;
+    --shadow:0 1px 3px rgba(16,24,40,.08),0 8px 24px rgba(16,24,40,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+       background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5}
+  header{position:sticky;top:0;z-index:20;background:linear-gradient(90deg,#1e2a52,#2b5cff);color:#fff;
+          padding:14px 22px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow)}
+  header h1{font-size:17px;margin:0;font-weight:650;letter-spacing:.5px}
+  header .tag{font-size:12px;background:rgba(255,255,255,.16);padding:2px 8px;border-radius:20px}
+  .cfg{margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .cfg label{font-size:11px;opacity:.85;display:block;margin-bottom:2px}
+  .cfg input{background:rgba(255,255,255,.95);border:1px solid transparent;border-radius:8px;
+             padding:6px 9px;font-size:12px;color:#111;width:200px;outline:none}
+  .cfg input:focus{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.35)}
+  .wrap{display:flex;align-items:flex-start}
+  nav{position:sticky;top:64px;width:170px;flex:0 0 170px;padding:16px 10px;height:calc(100vh - 64px);overflow:auto}
+  nav a{display:block;padding:8px 12px;border-radius:8px;color:var(--sub);text-decoration:none;font-size:13px;margin-bottom:2px}
+  nav a:hover{background:var(--panel);color:var(--ink)}
+  nav a.active{background:var(--brand);color:#fff;font-weight:600}
+  main{flex:1;padding:18px 26px 60px;min-width:0}
+  .banner{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:10px 14px;border-radius:10px;
+          font-size:12.5px;margin-bottom:16px}
+  .banner b{color:#7c2d12}
+  .group{margin-bottom:26px;scroll-margin-top:72px}
+  .group h2{font-size:15px;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid var(--line);display:flex;align-items:center;gap:8px}
+  .group h2 .dot{width:9px;height:9px;border-radius:50%;background:var(--brand)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px}
+  .ep-title{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .method{font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;letter-spacing:.4px}
+  .m-GET{background:#e0ecff;color:#1d4ed8}.m-POST{background:#dcfce7;color:#15803d}
+  .m-PUT{background:#fef3c7;color:#b45309}.m-DELETE{background:#fee2e2;color:#b91c1c}
+  .ep-path{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;color:var(--code);word-break:break-all}
+  .fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:12px}
+  .fld label{display:block;font-size:11.5px;color:var(--sub);margin-bottom:3px}
+  .fld input,.fld textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12.5px;
+            font-family:inherit;outline:none;background:#fbfcfe;color:var(--ink)}
+  .fld input:focus,.fld textarea:focus{border-color:var(--brand);background:#fff}
+  .fld textarea{min-height:96px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical}
+  .req::after{content:" *";color:var(--bad)}
+  .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  button{font-family:inherit;cursor:pointer;border:none;border-radius:8px;font-size:13px;font-weight:600;padding:8px 16px;transition:.15s}
+  .btn-send{background:var(--brand);color:#fff}
+  .btn-send:hover{background:var(--brand-d)}
+  .btn-sig{background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe}
+  .btn-sig:hover{background:#e0e7ff}
+  .btn-ghost{background:transparent;color:var(--sub);border:1px solid var(--line)}
+  .sigbox{background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px}
+  .sigbox .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  .sigbox code{background:#0f172a;color:#a5f3fc;padding:3px 8px;border-radius:6px;font-size:11.5px;word-break:break-all}
+  .resp{margin-top:14px;border-top:1px solid var(--line);padding-top:12px;display:none}
+  .resp.show{display:block}
+  .resp-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12px;color:var(--sub)}
+  .status{font-weight:700;padding:2px 9px;border-radius:20px;font-size:11.5px}
+  .s-2{background:#dcfce7;color:#15803d}.s-4{background:#fee2e2;color:#b91c1c}.s-5{background:#fef3c7;color:#b45309}
+  .s-0{background:#e5e7eb;color:#374151}
+  pre{background:#0f172a;color:#e2e8f0;border-radius:10px;padding:14px;overflow:auto;max-height:420px;
+      font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.55;margin:0;white-space:pre}
+  .tok-key{color:#7dd3fc}.tok-str{color:#86efac}.tok-num{color:#fca5a5}.tok-bool{color:#fcd34d}
+  .empty{color:#64748b;font-style:italic}
+  .hint{font-size:11.5px;color:var(--sub);margin-top:6px}
+  footer{padding:18px 26px;color:var(--sub);font-size:12px;text-align:center;border-top:1px solid var(--line)}
+  @media(max-width:760px){nav{display:none}.cfg input{width:140px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>抖店开放平台 · 接口测试台</h1>
+  <span class="tag">Spring Boot 2.7 / Java 8</span>
+  <div class="cfg">
+    <div><label>Base URL</label><input id="cfg-base" placeholder="http://localhost:8080" /></div>
+  <!-- 本地联调请在下方填写：API-Key 与 douyin.api.security.api-key 一致、消息 Token 与 douyin.message.token 一致（均通过环境变量注入，不硬编码） -->
+  <div><label>API-Key（X-API-Key）</label><input id="cfg-key" placeholder="与 douyin.api-key 一致（本地联调可填环境变量值）" /></div>
+  <div><label>消息 Token（推送签名）</label><input id="cfg-token" placeholder="与 douyin.message-token 一致（本地联调可填环境变量值）" /></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav id="nav"></nav>
+  <main>
+    <div class="banner">
+      说明：本页为本地联调工具。鉴权接口需在请求头带 <b>X-API-Key</b>（值等于 <code>douyin.api-key</code>），
+      可在此页右上角填写并自动保存。OAuth 回调 <code>/auth/**</code> 与消息推送 <code>/push/**</code> 不受 API-Key 限制。
+      推送接口支持“一键生成签名”，用同款 SHA1 算法模拟平台请求。
+    </div>
+    <div id="content"></div>
+    <footer>Generated for 抖店开放平台集成脚手架 · 仅用于开发联调，请勿在生产环境暴露此页面</footer>
+  </main>
+</div>
+
+<script>
+/* ---------- 端点定义（与后端控制器一一对应） ---------- */
+const GROUPS = [
+  {id:'auth',    name:'授权 OAuth'},
+  {id:'shop',    name:'店铺'},
+  {id:'product', name:'商品'},
+  {id:'order',   name:'订单'},
+  {id:'material',name:'素材'},
+  {id:'data',    name:'经营数据'},
+  {id:'push',    name:'消息推送'},
+  {id:'messages',name:'推送记录'},
+];
+
+const ENDPOINTS = [
+  {group:'auth', label:'获取授权页 URL', method:'GET', path:'/api/douyin/auth/url',
+    fields:[{n:'state',l:'state（可选）'},{n:'redirectUri',l:'redirectUri（可选，覆盖默认）'}]},
+  {group:'auth', label:'授权回调换 Token', method:'GET', path:'/api/douyin/auth/callback',
+    fields:[{n:'code',l:'code（授权码）',r:true}]},
+
+  {group:'shop', label:'店铺列表', method:'GET', path:'/api/douyin/shops',
+    fields:[{n:'shopId',l:'shopId',r:true}]},
+
+  {group:'product', label:'商品列表', method:'GET', path:'/api/douyin/products',
+    fields:[{n:'shopId',l:'shopId',r:true},{n:'page',l:'page',d:'0'},{n:'size',l:'size',d:'10'},
+            {n:'status',l:'status（可选）'},{n:'checkStatus',l:'checkStatus（可选）'}]},
+  {group:'product', label:'商品详情', method:'GET', path:'/api/douyin/products/{productId}',
+    fields:[{n:'shopId',l:'shopId',r:true},{n:'productId',l:'productId（路径参数）',r:true}]},
+
+  {group:'order', label:'订单列表', method:'GET', path:'/api/douyin/orders',
+    fields:[{n:'shopId',l:'shopId',r:true},{n:'orderState',l:'orderState（可选）'},
+            {n:'startTime',l:'startTime（可选）'},{n:'endTime',l:'endTime（可选）'},
+            {n:'page',l:'page',d:'0'},{n:'size',l:'size',d:'10'}]},
+  {group:'order', label:'订单详情', method:'GET', path:'/api/douyin/orders/{orderId}',
+    fields:[{n:'shopId',l:'shopId',r:true},{n:'orderId',l:'orderId（路径参数）',r:true}]},
+
+  {group:'material', label:'素材列表', method:'GET', path:'/api/douyin/materials',
+    fields:[{n:'shopId',l:'shopId',r:true},{n:'materialType',l:'materialType（可选）'},
+            {n:'pageNo',l:'pageNo',d:'0'},{n:'pageSize',l:'pageSize',d:'10'}]},
+
+  {group:'data', label:'经营数据 · 日汇总', method:'GET', path:'/api/douyin/data/daily-summary',
+    fields:[{n:'shopId',l:'shopId',r:true},{n:'startTime',l:'startTime（可选）'},{n:'endTime',l:'endTime（可选）'}]},
+
+  {group:'messages', label:'查看已接收推送', method:'GET', path:'/api/douyin/messages', fields:[]},
+
+  {group:'push', label:'推送 URL 校验（GET）', method:'GET', path:'/api/douyin/push', push:true,
+    fields:[{n:'echostr',l:'echostr',d:'test-echostr'}]},
+  {group:'push', label:'模拟业务事件推送（POST）', method:'POST', path:'/api/douyin/push', push:true, body:true,
+    bodyDefault:'{\n  "tag": "order.TradeCreate",\n  "msg_id": "1001",\n  "msg": { "order_id": "6930000000000000001" }\n}'},
+];
+
+/* ---------- 工具：持久化配置 ---------- */
+const LS='dytest_';
+function lsg(k){return localStorage.getItem(LS+k)||''}
+function lss(k,v){localStorage.setItem(LS+k,v)}
+function initCfg(){
+  const base=document.getElementById('cfg-base');
+  base.value = lsg('base') || (location.origin && location.origin.startsWith('http') ? location.origin : 'http://localhost:8080');
+  // key/token 优先用 localStorage，无存储时保留 HTML 中的本地联调默认值
+  const keyInput=document.getElementById('cfg-key');
+  const tokInput=document.getElementById('cfg-token');
+  const keyDef=keyInput.value, tokDef=tokInput.value;
+  keyInput.value = lsg('key') || keyDef;
+  tokInput.value = lsg('token') || tokDef;
+  ['base','key','token'].forEach(k=>{
+    document.getElementById('cfg-'+k).addEventListener('input',e=>lss(k,e.target.value));
+  });
+}
+function cfg(){return{base:document.getElementById('cfg-base').value.trim().replace(/\/+$/,''),
+                     key:document.getElementById('cfg-key').value.trim(),
+                     token:document.getElementById('cfg-token').value.trim()};}
+
+/* ---------- 渲染导航与表单 ---------- */
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function render(){
+  const nav=document.getElementById('nav');
+  nav.innerHTML=GROUPS.map(g=>`<a href="#g-${g.id}" data-g="${g.id}">${g.name}</a>`).join('');
+  const c=document.getElementById('content');
+  c.innerHTML=GROUPS.map(g=>{
+    const eps=ENDPOINTS.filter(e=>e.group===g.id);
+    return `<section class="group" id="g-${g.id}"><h2><span class="dot"></span>${g.name}</h2>`+
+      eps.map((e,i)=>card(e,g.id+'-'+i)).join('')+`</section>`;
+  }).join('');
+  navLinks();
+}
+function card(e,id){
+  const fields=e.fields.map(f=>`
+    <div class="fld">
+      <label class="${f.r?'req':''}">${esc(f.l||f.n)}</label>
+      <input data-f="${f.n}" placeholder="${f.d||''}" value="${f.d||''}" />
+    </div>`).join('');
+  const bodyBlock = e.body ? `
+    <div class="fld" style="grid-column:1/-1">
+      <label>请求体 (JSON)</label>
+      <textarea data-body>${esc(e.bodyDefault||'')}</textarea>
+    </div>`:'';
+  const sigBlock = e.push ? `
+    <div class="sigbox">
+      <div>消息推送签名：<b>SHA1(排序(token, timestamp, nonce) 拼接)</b>，与后端 PushSignatureVerifier 同款。</div>
+      <div class="row">
+        <button type="button" class="btn-sig" onclick="genSig('${id}')">⚡ 一键生成签名</button>
+        <span>signature: <code id="${id}-sig">—</code></span>
+      </div>
+      <div class="row">
+        <div class="fld" style="flex:1;min-width:160px"><label>timestamp</label><input data-push="timestamp" placeholder="自动生成" /></div>
+        <div class="fld" style="flex:1;min-width:160px"><label>nonce</label><input data-push="nonce" placeholder="自动生成" /></div>
+      </div>
+    </div>`:'';
+  return `<div class="card">
+    <div class="ep-title">
+      <span class="method m-${e.method}">${e.method}</span>
+      <span class="ep-path">${esc(e.path)}</span>
+    </div>
+    ${sigBlock}
+    <div class="fields">${fields}${bodyBlock}</div>
+    <div class="actions">
+      <button class="btn-send" onclick="send('${id}')">发送请求</button>
+      <span class="hint">${e.push?'GET/POST 的 signature/timestamp/nonce 均为 query 参数':'所有参数均为 query 参数'}</span>
+    </div>
+    <div class="resp" id="${id}-resp">
+      <div class="resp-head">
+        <span>状态：<span class="status s-0" id="${id}-status">—</span></span>
+        <span id="${id}-time"></span>
+        <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="copyResp('${id}')">复制响应</button>
+      </div>
+      <pre id="${id}-body"><span class="empty">尚未请求</span></pre>
+    </div>
+  </div>`;
+}
+
+/* ---------- 签名计算（纯 JS SHA1，避免 secure-context 限制） ---------- */
+function sha1Hex(s){
+  function rotl(n,x){return (x<<n)|(x>>>(32-n));}
+  function toHex(n){let r='';for(let i=7;i>=0;i--)r+=((n>>>(i*4))&0xf).toString(16);return r;}
+  let msg=s.encode?undefined:undefined;
+  const utf8=unescape(encodeURIComponent(s));
+  const words=[];
+  for(let i=0;i<utf8.length;i+=1){words[i>>2]|=(utf8.charCodeAt(i)&0xff)<<(24-(i%4)*8);}
+  const len=utf8.length;
+  words[len>>2]|=0x80<<(24-(len%4)*8);
+  words[(((len+8)>>6)<<4)+15]=len*8;
+  const w=new Array(80);
+  let h0=0x67452301,h1=0xEFCDAB89,h2=0x98BADCFE,h3=0x10325476,h4=0xC3D2E1F0;
+  for(let i=0;i<words.length;i+=16){
+    for(let t=0;t<16;t++)w[t]=words[i+t]||0;
+    for(let t=16;t<80;t++)w[t]=rotl(1,w[t-3]^w[t-8]^w[t-14]^w[t-16]);
+    let a=h0,b=h1,c=h2,d=h3,e=h4;
+    for(let t=0;t<80;t++){
+      let f,k;
+      if(t<20){f=(b&c)|((~b)&d);k=0x5A827999;}
+      else if(t<40){f=b^c^d;k=0x6ED9EBA1;}
+      else if(t<60){f=(b&c)|(b&d)|(c&d);k=0x8F1BBCDC;}
+      else{f=b^c^d;k=0xCA62C1D6;}
+      const tmp=(rotl(5,a)+f+e+k+w[t])>>>0;
+      e=d;d=c;c=rotl(30,b);b=a;a=tmp;
+    }
+    h0=(h0+a)>>>0;h1=(h1+b)>>>0;h2=(h2+c)>>>0;h3=(h3+d)>>>0;h4=(h4+e)>>>0;
+  }
+  return toHex(h0)+toHex(h1)+toHex(h2)+toHex(h3)+toHex(h4);
+}
+function genSig(id){
+  const t=cfg().token || prompt('请输入消息 Token（douyin.message-token）：');
+  if(!t){return;}
+  const timestamp=String(Math.floor(Date.now()/1000));
+  const nonce=Math.random().toString(36).slice(2,12);
+  const arr=[t,timestamp,nonce].sort();
+  const signature=sha1Hex(arr.join(''));
+  document.querySelector(`#${cssEsc(id)} [data-push="timestamp"]`).value=timestamp;
+  document.querySelector(`#${cssEsc(id)} [data-push="nonce"]`).value=nonce;
+  document.getElementById(id+'-sig').textContent=signature;
+}
+function cssEsc(s){return s.replace(/[^a-zA-Z0-9_-]/g,'\\\\$&');}
+
+/* ---------- 发送请求 ---------- */
+function findEp(id){const [g,idx]=id.split('-');return ENDPOINTS.filter(e=>e.group===g)[+idx];}
+async function send(id){
+  const e=findEp(id);
+  const c=cfg();
+  if(!c.base){alert('请先填写 Base URL');return;}
+  // 收集 query 参数
+  const params=new URLSearchParams();
+  document.querySelectorAll(`#${cssEsc(id)} [data-f]`).forEach(inp=>{
+    const v=inp.value.trim(); if(v!=='')params.set(inp.dataset.f,v);
+  });
+  // 路径参数替换
+  let path=e.path;
+  const pp=path.match(/\{(\w+)\}/g);
+  if(pp){
+    for(const p of pp){
+      const name=p.slice(1,-1);
+      const v=params.get(name);
+      if(v!==null){path=path.replace(p,v);params.delete(name);}
+    }
+  }
+  // 推送签名参数
+  if(e.push){
+    ['signature','timestamp','nonce'].forEach(k=>{
+      const inp=document.querySelector(`#${cssEsc(id)} [data-push="${k}"]`);
+      const v=inp?inp.value.trim():''; if(v)params.set(k,v);
+    });
+  }
+  const qs=params.toString();
+  const url=c.base+path+(qs?'?'+qs:'');
+  const headers={};
+  if(c.key)headers['X-API-Key']=c.key;
+  const opts={method:e.method,headers};
+  if(e.body){
+    opts.body=document.querySelector(`#${cssEsc(id)} [data-body]`).value;
+    headers['Content-Type']='application/json';
+  }
+  const statusEl=document.getElementById(id+'-status');
+  const timeEl=document.getElementById(id+'-time');
+  const bodyEl=document.getElementById(id+'-body');
+  const respEl=document.getElementById(id+'-resp');
+  respEl.classList.add('show');
+  statusEl.className='status s-0';statusEl.textContent='请求中…';timeEl.textContent='';
+  bodyEl.innerHTML='<span class="empty">请求发送中…</span>';
+  const t0=performance.now();
+  try{
+    const r=await fetch(url,opts);
+    const ms=Math.round(performance.now()-t0);
+    let text=await r.text();
+    let display=text;
+    try{display=JSON.stringify(JSON.parse(text),null,2);}catch(_){}
+    const cls=r.ok?'s-2':(r.status>=500?'s-5':'s-4');
+    statusEl.className='status '+cls;
+    statusEl.textContent=r.status+' '+(r.statusText||'');
+    timeEl.textContent='· '+ms+' ms';
+    bodyEl.innerHTML=highlight(display);
+    bodyEl.dataset.raw=text;
+  }catch(err){
+    const ms=Math.round(performance.now()-t0);
+    statusEl.className='status s-4';statusEl.textContent='网络错误';
+    timeEl.textContent='· '+ms+' ms';
+    bodyEl.innerHTML='<span class="empty">请求失败：'+esc(err.message)+'\n请确认：① 后端已启动 ② Base URL 正确 ③ 跨域/CORS 已放行</span>';
+  }
+}
+function copyResp(id){
+  const el=document.getElementById(id+'-body');
+  const txt=el.dataset.raw||el.innerText;
+  navigator.clipboard?.writeText(txt).then(()=>{},()=>{});
+}
+
+/* ---------- JSON 语法高亮 ---------- */
+function highlight(json){
+  if(typeof json!=='string')json=String(json);
+  json=esc(json);
+  return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+\-]?\d+)?)/g,
+    m=>{
+      let cls='tok-num';
+      if(/^"/.test(m)){cls=/:$/.test(m)?'tok-key':'tok-str';}
+      else if(/true|false/.test(m))cls='tok-bool';
+      else if(/null/.test(m))cls='tok-bool';
+      return '<span class="'+cls+'">'+m+'</span>';
+    });
+}
+
+/* ---------- 导航高亮 ---------- */
+function navLinks(){
+  const links=[...document.querySelectorAll('nav a')];
+  links.forEach(a=>a.addEventListener('click',()=>{
+    links.forEach(x=>x.classList.remove('active'));a.classList.add('active');
+  }));
+  const obs=new IntersectionObserver(entries=>{
+    entries.forEach(en=>{if(en.isIntersecting){
+      links.forEach(x=>x.classList.toggle('active',x.dataset.g===en.target.id.replace('g-','')));
+    }});
+  },{rootMargin:'-30% 0px -60% 0px'});
+  document.querySelectorAll('.group').forEach(g=>obs.observe(g));
+  links[0]&&links[0].classList.add('active');
+}
+
+initCfg();
+render();
+</script>
+</body>
+</html>
