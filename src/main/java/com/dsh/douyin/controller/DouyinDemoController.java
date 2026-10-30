@@ -2,6 +2,7 @@ package com.dsh.douyin.controller;
 
 import com.dsh.douyin.common.error.BusinessException;
 import com.dsh.douyin.common.model.Result;
+import com.dsh.douyin.config.DouyinProperties;
 import com.dsh.douyin.core.AccessTokenManager;
 import com.dsh.douyin.core.AuthService;
 import com.dsh.douyin.core.model.TokenResult;
@@ -52,11 +53,13 @@ public class DouyinDemoController {
     private final MaterialApi materialApi;
     private final DataApi dataApi;
     private final MessageDispatchService messageDispatchService;
+    private final DouyinProperties props;
 
     public DouyinDemoController(AuthService authService, AccessTokenManager tokenManager,
                                 ShopApi shopApi, ProductApi productApi, OrderApi orderApi,
                                 MaterialApi materialApi, DataApi dataApi,
-                                MessageDispatchService messageDispatchService) {
+                                MessageDispatchService messageDispatchService,
+                                DouyinProperties props) {
         this.authService = authService;
         this.tokenManager = tokenManager;
         this.shopApi = shopApi;
@@ -65,6 +68,20 @@ public class DouyinDemoController {
         this.materialApi = materialApi;
         this.dataApi = dataApi;
         this.messageDispatchService = messageDispatchService;
+        this.props = props;
+    }
+
+    /**
+     * 运行状态：供前端测试页判断是否处于 Mock 模式，从而决定是否自动演示。
+     */
+    @GetMapping("/sys/info")
+    @Operation(summary = "运行状态", description = "返回当前是否 Mock 模式、是否已配置平台凭证，供测试页自动适配")
+    public Result<Map<String, Object>> sysInfo() {
+        Map<String, Object> info = new LinkedHashMap<>();
+        info.put("mock", props.getMock().isEnabled());
+        info.put("appKeyConfigured", props.getAppKey() != null && !props.getAppKey().trim().isEmpty());
+        info.put("apiKeyRequired", props.isSecurityEnabled() && props.getApiKey() != null && !props.getApiKey().trim().isEmpty());
+        return Result.ok(info);
     }
 
     /** 构造授权页 URL，引导商家点击授权 */

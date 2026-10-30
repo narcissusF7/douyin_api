@@ -1,8 +1,10 @@
 package com.dsh.douyin.core;
 
 import com.dsh.douyin.common.error.BusinessException;
+import com.dsh.douyin.config.DouyinProperties;
 import com.dsh.douyin.core.model.TokenEntry;
 import com.dsh.douyin.core.model.TokenResult;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -16,10 +18,18 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AccessTokenManager {
 
     private final AuthService authService;
+    private final DouyinProperties props;
     private final Map<Long, TokenEntry> cache = new ConcurrentHashMap<>();
 
-    public AccessTokenManager(AuthService authService) {
+    @Autowired
+    public AccessTokenManager(AuthService authService, DouyinProperties props) {
         this.authService = authService;
+        this.props = props;
+    }
+
+    /** 兼容单测：未注入配置时按非 Mock 行为 */
+    public AccessTokenManager(AuthService authService) {
+        this(authService, new DouyinProperties());
     }
 
     /** 授权回调后存入令牌 */
@@ -29,6 +39,9 @@ public class AccessTokenManager {
 
     /** 获取某店铺可用的 access_token，必要时自动刷新 */
     public String getAccessToken(Long shopId) {
+        if (props.getMock().isEnabled()) {
+            return "MOCK_ACCESS_TOKEN";
+        }
         TokenEntry entry = cache.get(shopId);
         if (entry == null) {
             throw new BusinessException("店铺[" + shopId + "]尚未授权，请先引导商家授权");

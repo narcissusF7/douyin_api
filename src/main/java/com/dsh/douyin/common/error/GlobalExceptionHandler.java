@@ -5,8 +5,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /**
  * 全局异常处理：将内部异常转换为规范化、不含堆栈的对外响应。
@@ -27,6 +29,20 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Result<Void>> handleBusiness(BusinessException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Result.fail(ex.getCode(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<Result<Void>> handleMissingParam(MissingServletRequestParameterException ex) {
+        String msg = "缺少必填参数：" + ex.getParameterName() + "（" + ex.getParameterType() + "）";
+        log.warn(msg);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Result.fail(400, msg));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Result<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        String msg = "参数类型错误：" + ex.getName() + " 的值 '" + ex.getValue() + "' 无法转换";
+        log.warn(msg);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Result.fail(400, msg));
     }
 
     @ExceptionHandler(Exception.class)

@@ -51,20 +51,29 @@ public class DouyinApiClient {
     public <T> T execute(String method, Object bizParams, String accessToken, Class<T> dataClass) {
         String paramJson = (bizParams == null) ? "{}" : JsonUtils.toJson(bizParams);
 
-        Map<String, String> params = new LinkedHashMap<>();
-        params.put("method", method);
-        params.put("app_key", props.getAppKey());
-        params.put("timestamp", DateTimeUtils.nowGmt8());
-        params.put("v", "2");
-        params.put("sign_method", "md5");
-        params.put("format", "json");
-        if (accessToken != null && !accessToken.isEmpty()) {
-            params.put("access_token", accessToken);
+        String respBody;
+        if (props.getMock().isEnabled()) {
+            // 本地 Mock 模式：直接返回仿真响应，不发起真实网关请求
+            respBody = DouyinMockProvider.buildResponse(method, paramJson);
+        } else {
+            Map<String, String> params = new LinkedHashMap<>();
+            params.put("method", method);
+            params.put("app_key", props.getAppKey());
+            params.put("timestamp", DateTimeUtils.nowGmt8());
+            params.put("v", "2");
+            params.put("sign_method", "md5");
+            params.put("format", "json");
+            if (accessToken != null && !accessToken.isEmpty()) {
+                params.put("access_token", accessToken);
+            }
+            params.put("param_json", paramJson);
+            params.put("sign", SignUtil.sign(params, props.getAppSecret()));
+            respBody = doPost(params);
         }
-        params.put("param_json", paramJson);
-        params.put("sign", SignUtil.sign(params, props.getAppSecret()));
+        return parse(respBody, dataClass);
+    }
 
-        String respBody = doPost(params);
+    private <T> T parse(String respBody, Class<T> dataClass) {
         ApiResult result = JsonUtils.fromJson(respBody, ApiResult.class);
         if (result.getErrNo() != 0) {
             throw new DouyinApiException(result.getErrNo(), result.getMessage(), result.getLogId());

@@ -31,7 +31,11 @@ public class AuthService {
         String redirect = (redirectUri != null && !redirectUri.isEmpty())
                 ? redirectUri : props.getRedirectUri();
         if (redirect == null || redirect.isEmpty()) {
-            throw new BusinessException("未配置 redirect-uri，无法构造授权 URL");
+            if (props.getMock().isEnabled()) {
+                redirect = "http://localhost:8080/api/douyin/auth/callback";
+            } else {
+                throw new BusinessException("未配置 redirect-uri，无法构造授权 URL");
+            }
         }
         return UriComponentsBuilder.fromHttpUrl(props.getAuthorizeUrl())
                 .queryParam("client_key", props.getAppKey())

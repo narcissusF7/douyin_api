@@ -54,12 +54,35 @@ public class DouyinProperties {
     /** 消息推送校验 token（平台后台配置的消息推送 token） */
     private String messageToken = "";
 
+    // ===== 本地 Mock 模式 =====
+    /** 本地 Mock 配置：开启后所有抖店网关调用返回仿真数据，无需真实 app_key/app_secret，便于本地联调与演示 */
+    private final Mock mock = new Mock();
+
+    /** 本地 Mock 子配置 */
+    public static class Mock {
+        /** 是否开启 Mock（默认关闭） */
+        private boolean enabled = false;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+    }
+
     @PostConstruct
     public void validate() {
+        if (mock.isEnabled()) {
+            // Mock 模式不依赖真实凭证，跳过校验
+            return;
+        }
         if (!StringUtils.hasText(appKey) || !StringUtils.hasText(appSecret)) {
             throw new IllegalStateException(
                     "抖音开放平台凭证未配置：请设置环境变量 DOUYIN_APP_KEY / DOUYIN_APP_SECRET，" +
-                            "或在 application.yml 的 douyin.app-key / douyin.app-secret 中填写（请勿提交真实密钥到代码库）。");
+                            "或在 application.yml 的 douyin.app-key / douyin.app-secret 中填写（请勿提交真实密钥到代码库）。" +
+                            "本地演示可开启 douyin.mock.enabled=true 跳过凭证校验。");
         }
     }
 
@@ -165,5 +188,16 @@ public class DouyinProperties {
 
     public void setMessageToken(String messageToken) {
         this.messageToken = messageToken;
+    }
+
+    public Mock getMock() {
+        return mock;
+    }
+
+    public void setMock(Mock mock) {
+        // 允许外部整体覆盖；通常绑定器通过 getMock().setEnabled(...) 设置
+        if (mock != null) {
+            this.mock.enabled = mock.enabled;
+        }
     }
 }

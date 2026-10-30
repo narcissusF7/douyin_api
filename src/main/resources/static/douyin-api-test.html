@@ -55,6 +55,12 @@
   .btn-sig{background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe}
   .btn-sig:hover{background:#e0e7ff}
   .btn-ghost{background:transparent;color:var(--sub);border:1px solid var(--line)}
+  .btn-runall{background:#0f766e;color:#fff;box-shadow:0 2px 6px rgba(15,118,110,.3)}
+  .btn-runall:hover{background:#115e56}
+  .btn-runall[disabled]{opacity:.55;cursor:progress}
+  .mode-tip{margin:0 0 14px;padding:9px 14px;border-radius:10px;font-size:13px;display:none}
+  .mode-tip.ok{display:block;background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46}
+  .mode-tip.warn{display:block;background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
   .sigbox{background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px}
   .sigbox .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
   .sigbox code{background:#0f172a;color:#a5f3fc;padding:3px 8px;border-radius:6px;font-size:11.5px;word-break:break-all}
@@ -82,12 +88,14 @@
   <!-- 本地联调请在下方填写：API-Key 与 douyin.api.security.api-key 一致、消息 Token 与 douyin.message.token 一致（均通过环境变量注入，不硬编码） -->
   <div><label>API-Key（X-API-Key）</label><input id="cfg-key" placeholder="与 douyin.api-key 一致（本地联调可填环境变量值）" /></div>
   <div><label>消息 Token（推送签名）</label><input id="cfg-token" placeholder="与 douyin.message-token 一致（本地联调可填环境变量值）" /></div>
+  <button class="btn-runall" id="btn-runall" onclick="runAll()">▶ 一键运行全部</button>
   </div>
 </header>
 
 <div class="wrap">
   <nav id="nav"></nav>
   <main>
+    <div id="mode-tip" class="mode-tip"></div>
     <div class="banner">
       说明：本页为本地联调工具。鉴权接口需在请求头带 <b>X-API-Key</b>（值等于 <code>douyin.api-key</code>），
       可在此页右上角填写并自动保存。OAuth 回调 <code>/auth/**</code> 与消息推送 <code>/push/**</code> 不受 API-Key 限制。
@@ -99,7 +107,24 @@
 </div>
 
 <script>
+// 全局兜底：脚本异常时在顶部提示，避免页面静默空白
+window.addEventListener('error', function (ev) {
+  try {
+    var t = document.getElementById('mode-tip');
+    if (t) { t.className = 'mode-tip warn'; t.textContent = '⚠️ 页面脚本错误：' + (ev.message || ev.error || '未知错误'); }
+    document.title = 'JS错误: ' + (ev.message || '');
+  } catch (_) {}
+});
+
 /* ---------- 端点定义（与后端控制器一一对应） ---------- */
+// 演示用默认参数：Mock 模式下可直接点「发送请求」或「一键运行全部」拿到仿真数据
+const DEMO = {
+  shopId: '1',
+  productId: '6900002',
+  orderId: '6900000000000000001',
+  code: 'mockcode'
+};
+
 const GROUPS = [
   {id:'auth',    name:'授权 OAuth'},
   {id:'shop',    name:'店铺'},
@@ -115,36 +140,36 @@ const ENDPOINTS = [
   {group:'auth', label:'获取授权页 URL', method:'GET', path:'/api/douyin/auth/url',
     fields:[{n:'state',l:'state（可选）'},{n:'redirectUri',l:'redirectUri（可选，覆盖默认）'}]},
   {group:'auth', label:'授权回调换 Token', method:'GET', path:'/api/douyin/auth/callback',
-    fields:[{n:'code',l:'code（授权码）',r:true}]},
+    fields:[{n:'code',l:'code（授权码）',r:true,d:DEMO.code}]},
 
   {group:'shop', label:'店铺列表', method:'GET', path:'/api/douyin/shops',
-    fields:[{n:'shopId',l:'shopId',r:true}]},
+    fields:[{n:'shopId',l:'shopId',r:true,d:DEMO.shopId}]},
 
   {group:'product', label:'商品列表', method:'GET', path:'/api/douyin/products',
-    fields:[{n:'shopId',l:'shopId',r:true},{n:'page',l:'page',d:'0'},{n:'size',l:'size',d:'10'},
+    fields:[{n:'shopId',l:'shopId',r:true,d:DEMO.shopId},{n:'page',l:'page',d:'0'},{n:'size',l:'size',d:'10'},
             {n:'status',l:'status（可选）'},{n:'checkStatus',l:'checkStatus（可选）'}]},
   {group:'product', label:'商品详情', method:'GET', path:'/api/douyin/products/{productId}',
-    fields:[{n:'shopId',l:'shopId',r:true},{n:'productId',l:'productId（路径参数）',r:true}]},
+    fields:[{n:'shopId',l:'shopId',r:true,d:DEMO.shopId},{n:'productId',l:'productId（路径参数）',r:true,d:DEMO.productId}]},
 
   {group:'order', label:'订单列表', method:'GET', path:'/api/douyin/orders',
-    fields:[{n:'shopId',l:'shopId',r:true},{n:'orderState',l:'orderState（可选）'},
+    fields:[{n:'shopId',l:'shopId',r:true,d:DEMO.shopId},{n:'orderState',l:'orderState（可选）'},
             {n:'startTime',l:'startTime（可选）'},{n:'endTime',l:'endTime（可选）'},
             {n:'page',l:'page',d:'0'},{n:'size',l:'size',d:'10'}]},
   {group:'order', label:'订单详情', method:'GET', path:'/api/douyin/orders/{orderId}',
-    fields:[{n:'shopId',l:'shopId',r:true},{n:'orderId',l:'orderId（路径参数）',r:true}]},
+    fields:[{n:'shopId',l:'shopId',r:true,d:DEMO.shopId},{n:'orderId',l:'orderId（路径参数）',r:true,d:DEMO.orderId}]},
 
   {group:'material', label:'素材列表', method:'GET', path:'/api/douyin/materials',
-    fields:[{n:'shopId',l:'shopId',r:true},{n:'materialType',l:'materialType（可选）'},
+    fields:[{n:'shopId',l:'shopId',r:true,d:DEMO.shopId},{n:'materialType',l:'materialType（可选）'},
             {n:'pageNo',l:'pageNo',d:'0'},{n:'pageSize',l:'pageSize',d:'10'}]},
 
   {group:'data', label:'经营数据 · 日汇总', method:'GET', path:'/api/douyin/data/daily-summary',
-    fields:[{n:'shopId',l:'shopId',r:true},{n:'startTime',l:'startTime（可选）'},{n:'endTime',l:'endTime（可选）'}]},
+    fields:[{n:'shopId',l:'shopId',r:true,d:DEMO.shopId},{n:'startTime',l:'startTime（可选）'},{n:'endTime',l:'endTime（可选）'}]},
 
   {group:'messages', label:'查看已接收推送', method:'GET', path:'/api/douyin/messages', fields:[]},
 
   {group:'push', label:'推送 URL 校验（GET）', method:'GET', path:'/api/douyin/push', push:true,
     fields:[{n:'echostr',l:'echostr',d:'test-echostr'}]},
-  {group:'push', label:'模拟业务事件推送（POST）', method:'POST', path:'/api/douyin/push', push:true, body:true,
+  {group:'push', label:'模拟业务事件推送（POST）', method:'POST', path:'/api/douyin/push', push:true, body:true, fields:[],
     bodyDefault:'{\n  "tag": "order.TradeCreate",\n  "msg_id": "1001",\n  "msg": { "order_id": "6930000000000000001" }\n}'},
 ];
 
@@ -183,7 +208,7 @@ function render(){
   navLinks();
 }
 function card(e,id){
-  const fields=e.fields.map(f=>`
+  const fields=(e.fields||[]).map(f=>`
     <div class="fld">
       <label class="${f.r?'req':''}">${esc(f.l||f.n)}</label>
       <input data-f="${f.n}" placeholder="${f.d||''}" value="${f.d||''}" />
@@ -205,10 +230,11 @@ function card(e,id){
         <div class="fld" style="flex:1;min-width:160px"><label>nonce</label><input data-push="nonce" placeholder="自动生成" /></div>
       </div>
     </div>`:'';
-  return `<div class="card">
+  return `<div class="card" id="card-${id}">
     <div class="ep-title">
       <span class="method m-${e.method}">${e.method}</span>
       <span class="ep-path">${esc(e.path)}</span>
+      <span style="margin-left:auto;font-size:12px;color:var(--sub)">${esc(e.label)}</span>
     </div>
     ${sigBlock}
     <div class="fields">${fields}${bodyBlock}</div>
@@ -264,8 +290,8 @@ function genSig(id){
   const nonce=Math.random().toString(36).slice(2,12);
   const arr=[t,timestamp,nonce].sort();
   const signature=sha1Hex(arr.join(''));
-  document.querySelector(`#${cssEsc(id)} [data-push="timestamp"]`).value=timestamp;
-  document.querySelector(`#${cssEsc(id)} [data-push="nonce"]`).value=nonce;
+  document.querySelector(`#card-${id} [data-push="timestamp"]`).value=timestamp;
+  document.querySelector(`#card-${id} [data-push="nonce"]`).value=nonce;
   document.getElementById(id+'-sig').textContent=signature;
 }
 function cssEsc(s){return s.replace(/[^a-zA-Z0-9_-]/g,'\\\\$&');}
@@ -278,7 +304,7 @@ async function send(id){
   if(!c.base){alert('请先填写 Base URL');return;}
   // 收集 query 参数
   const params=new URLSearchParams();
-  document.querySelectorAll(`#${cssEsc(id)} [data-f]`).forEach(inp=>{
+  document.querySelectorAll(`#card-${id} [data-f]`).forEach(inp=>{
     const v=inp.value.trim(); if(v!=='')params.set(inp.dataset.f,v);
   });
   // 路径参数替换
@@ -294,7 +320,7 @@ async function send(id){
   // 推送签名参数
   if(e.push){
     ['signature','timestamp','nonce'].forEach(k=>{
-      const inp=document.querySelector(`#${cssEsc(id)} [data-push="${k}"]`);
+      const inp=document.querySelector(`#card-${id} [data-push="${k}"]`);
       const v=inp?inp.value.trim():''; if(v)params.set(k,v);
     });
   }
@@ -304,7 +330,7 @@ async function send(id){
   if(c.key)headers['X-API-Key']=c.key;
   const opts={method:e.method,headers};
   if(e.body){
-    opts.body=document.querySelector(`#${cssEsc(id)} [data-body]`).value;
+    opts.body=document.querySelector(`#card-${id} [data-body]`).value;
     headers['Content-Type']='application/json';
   }
   const statusEl=document.getElementById(id+'-status');
@@ -327,11 +353,13 @@ async function send(id){
     timeEl.textContent='· '+ms+' ms';
     bodyEl.innerHTML=highlight(display);
     bodyEl.dataset.raw=text;
+    return r.ok;
   }catch(err){
     const ms=Math.round(performance.now()-t0);
     statusEl.className='status s-4';statusEl.textContent='网络错误';
     timeEl.textContent='· '+ms+' ms';
     bodyEl.innerHTML='<span class="empty">请求失败：'+esc(err.message)+'\n请确认：① 后端已启动 ② Base URL 正确 ③ 跨域/CORS 已放行</span>';
+    return false;
   }
 }
 function copyResp(id){
@@ -369,8 +397,74 @@ function navLinks(){
   links[0]&&links[0].classList.add('active');
 }
 
-initCfg();
-render();
+/* ---------- 一键演示 / 自动运行 ---------- */
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+// 推送相关端点不在「一键运行」范围内（需先手工生成签名）
+const RUN_SKIP=new Set(['messages-0','push-0','push-1']);
+function allCardIds(){
+  const out=[];
+  GROUPS.forEach(g=>ENDPOINTS.filter(e=>e.group===g.id).forEach((e,i)=>out.push(g.id+'-'+i)));
+  return out;
+}
+async function runAll(){
+  const btn=document.getElementById('btn-runall');
+  if(btn){btn.disabled=true;btn.textContent='运行中…';}
+  let ok=0,total=0;
+  for(const id of allCardIds()){
+    if(RUN_SKIP.has(id))continue;
+    total++;
+    try{ if(await send(id))ok++; }catch(_){}
+    await sleep(80);
+  }
+  if(btn){btn.disabled=false;btn.textContent='▶ 一键运行全部';}
+  const tip=document.getElementById('mode-tip');
+  if(tip&&tip.classList.contains('ok')){
+    tip.textContent='✅ 已运行 '+total+' 个接口，成功 '+ok+' 个。下方每个接口卡片内即为仿真响应。';
+  }
+  const first=document.getElementById('card-shop-0')||document.getElementById('card-auth-0');
+  if(first)first.scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function probeMode(){
+  const c=cfg(); const headers={}; if(c.key)headers['X-API-Key']=c.key;
+  try{
+    const r=await fetch(c.base+'/api/douyin/sys/info',{headers});
+    if(!r.ok)return {ok:false,status:r.status};
+    const j=await r.json();
+    return {ok:true,data:j.data};
+  }catch(_){ return {ok:false,status:0}; }
+}
+async function boot(){
+  initCfg(); render();
+  const tip=document.getElementById('mode-tip');
+  const origin=(location.origin&&location.origin.startsWith('http'))?location.origin:'';
+  let probe=await probeMode();
+  // 若配置的 Base URL 连不上（常见：localStorage 残留了 localhost:8080），自动回退到当前页面来源
+  if(!probe.ok&&probe.status===0&&origin&&cfg().base!==origin){
+    const baseEl=document.getElementById('cfg-base');
+    baseEl.value=origin; lss('base',origin);
+    probe=await probeMode();
+  }
+  if(!probe.ok){
+    if(tip){
+      tip.className='mode-tip warn';
+      tip.textContent = probe.status===401||probe.status===403
+        ? '⚠️ 接口返回 '+probe.status+'：API-Key 不匹配。请清空右上角「API-Key」后重试，或填入与环境变量 DOUYIN_API_KEY 一致的值。'
+        : '⚠️ 无法连接 '+cfg().base+'（/api/douyin/sys/info）。请确认后端已启动、Base URL 与端口正确。';
+    }
+    return;
+  }
+  const d=probe.data||{};
+  if(d.mock){
+    if(tip){tip.className='mode-tip ok';
+      tip.textContent='🧪 当前为 Mock 模式：不会请求抖店网关，所有接口返回本地仿真数据。正在自动运行演示…';}
+    await sleep(250);
+    runAll();
+  }else{
+    if(tip){tip.className='mode-tip warn';
+      tip.textContent='🔗 当前为真实模式（app_key '+(d.appKeyConfigured?'已配置':'未配置')+'），调用会真实请求抖店网关，需先完成商家授权。';}
+  }
+}
+boot();
 </script>
 </body>
 </html>

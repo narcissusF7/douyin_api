@@ -36,6 +36,10 @@ douyin:
     # 平台后台「消息推送」处配置的 token，需与 DOUYIN_MESSAGE_TOKEN 一致；生产通过环境变量注入
     token: ${DOUYIN_MESSAGE_TOKEN:}
 
+  # 本地 Mock 模式：true 时所有抖店网关调用返回仿真数据，无需真实 app_key/app_secret，便于本地联调与演示；生产务必关闭
+  mock:
+    enabled: ${DOUYIN_MOCK_ENABLED:false}
+
 logging:
   level:
     com.dsh.douyin: INFO

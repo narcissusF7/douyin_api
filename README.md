@@ -47,6 +47,7 @@ export DOUYIN_REDIRECT_URI=https://你的域名/api/douyin/auth/callback
 export DOUYIN_SCOPE=                      # 按需填写授权 scope，逗号分隔
 export DOUYIN_API_KEY=你的接口密钥          # 对外接口 API-Key 鉴权（生产必配）
 export DOUYIN_MESSAGE_TOKEN=你的消息推送token  # 开放平台「消息订阅」后台配置的 token
+export DOUYIN_MOCK_ENABLED=false              # 本地 Mock 模式（演示/联调用，生产务必 false）
 ```
 
 或在 `application.yml` 的 `douyin.*` 下直接填写（仅本地调试用，加入 .gitignore）。
@@ -161,7 +162,27 @@ mvn spring-boot:run
 
 ---
 
-## 9. 前端接口测试页面
+## 9. 本地 Mock 模式（无需真实凭证即可演示）
+
+个人认证 / 无 `app_key` 时，开启 Mock 后所有抖店网关调用改为返回**仿真数据**，
+可直接在 Swagger 与前端测试页完整演示「授权 → 店铺 / 商品 / 订单 / 素材 / 经营数据」全链路，无需企业认证或真实店铺。
+
+- 开启方式（任选其一）：
+  - 环境变量：`export DOUYIN_MOCK_ENABLED=true`
+  - 或修改 `application.yml` 的 `douyin.mock.enabled: true`（注意为嵌套结构）
+  - 或启动参数：`java -jar xxx.jar --douyin.mock.enabled=true`
+- 行为：
+  - `DouyinApiClient` 不再请求真实网关，由 `core/DouyinMockProvider` 按 `method` 返回仿真响应
+    （字段命名与抖店开放平台一致，snake_case）；`product.getDetail` / `order.detail` 会回显请求中的 ID；
+  - `AccessTokenManager` 在 Mock 下跳过「未授权」校验，任意 `shopId` 均可直接调用业务接口；
+  - `auth/url` 在未配置 `redirect-uri` 时给出本地默认回调地址，便于走通授权演示；
+  - `DouyinProperties.validate()` 在 Mock 下跳过凭证校验，应用可无凭证启动。
+- 仿真数据示例：店铺「抖店Mock旗舰店」、商品 2 条、订单 2 条、素材 2 条、经营数据日汇总等。
+- ⚠️ **生产环境务必关闭**（默认值即为 false），避免返回伪造数据。
+
+---
+
+## 10. 前端接口测试页面
 
 项目内置一个零依赖的单文件测试台 `src/main/resources/static/douyin-api-test.html`，
 打包后随 jar 一起发布，访问 `http://<host>:<port>/douyin-api-test.html` 即可使用。
@@ -189,7 +210,7 @@ mvn clean package && java -jar target/douyin-open-api.jar
 
 ---
 
-## 10. 单元测试
+## 11. 单元测试
 
 已覆盖签名、底层调用、token 管理、接口鉴权、推送签名、配置校验，共 **18 个用例**，全部基于
 `MockRestServiceServer` / Mockito，无需联网或真实密钥即可运行：
@@ -209,7 +230,7 @@ mvn test
 
 ---
 
-## 11. 接口文档（Swagger / OpenAPI）
+## 12. 接口文档（Swagger / OpenAPI）
 
 已集成 `springdoc-openapi`（兼容 Spring Boot 2.7），零注解即可生成交互式文档：
 
@@ -224,7 +245,7 @@ mvn test
 
 ---
 
-## 12. 待核对 / 后续建议
+## 13. 待核对 / 后续建议
 
 - **method 名称**：`product.getDetail`、`order.searchList`、`order.detail`、`material.searchMaterial`、
   `compass.*` 等以官方文档最新版为准，必要时调整 `module/*/XxxApi.java` 中的 method 字符串。
